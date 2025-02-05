@@ -2,7 +2,9 @@ FROM python:3.10
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH /home/app
+ENV APP__HOME_DIR=/home
+ENV PYTHONPATH=/home/src
+
 
 RUN apt update -y && \
     apt install --no-install-recommends -y \
@@ -14,9 +16,11 @@ RUN apt update -y && \
 RUN pip install --upgrade pip
 RUN pip install poetry
 
-WORKDIR /home/app
+WORKDIR $APP__HOME_DIR
 COPY . .
 
 RUN poetry install --no-root
 
-CMD ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+COPY ./entrypoint-web.sh $APP__HOME_DIR/entrypoint-web.sh
+
+RUN chmod +x $APP__HOME_DIR/entrypoint-web.sh

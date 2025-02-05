@@ -11,6 +11,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      kafka-ui:
+        condition: service_started
     ports:
       - "18000:8000"
     environment:
@@ -18,7 +20,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/home/app
+      - ./:/home/src/
+    command:
+      - /home/entrypoint-web.sh
     networks:
       - fastapi-kafka-net
 
@@ -38,7 +42,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/home/app
+      - ./:/home/src/
+    command:
+      - /home/entrypoint-web.sh
     networks:
       - fastapi-kafka-net
 
@@ -58,7 +64,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/home/app
+      - ./:/home/src/
+    command:
+      - /home/entrypoint-web.sh
     networks:
       - fastapi-kafka-net
 
@@ -78,7 +86,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/home/app
+      - ./:/home/src/
+    command:
+      - /home/entrypoint-web.sh
     networks:
       - fastapi-kafka-net
 
