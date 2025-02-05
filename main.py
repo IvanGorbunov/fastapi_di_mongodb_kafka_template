@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 from typing import List
 from random import shuffle
@@ -8,19 +9,21 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
 load_dotenv()
 loop = asyncio.get_event_loop()
 
-spidey_names: List[str] = os.environ.get("SPIDEY_NAMES").split(",")
-kafka_bootstrap_servers: str = os.environ.get("KAFKA_BOOTSTRAP_SERVERS")
-spiderweb_topic: str = os.environ.get("SPIDERWEB_TOPIC")
-my_name: str = os.environ.get("MY_NAME")
+spidey_names: List[str] = os.environ.get("SPIDEY_NAMES", "").split(",")
+kafka_bootstrap_servers: str = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "")
+spiderweb_topic: str = os.environ.get("SPIDERWEB_TOPIC", "")
+my_name: str = os.environ.get("MY_NAME", "")
 
 mapping_place = {
     3: "name is the Winner!!!",
     2: "name is the Second Place!!!",
-    1: "name is the third Place!!!",
+    1: "name is the Third Place!!!",
 }
 
 
@@ -35,37 +38,33 @@ async def play_turn(finalists: List):
 
 
 def kafka_serializer(value):
-    return json.dumps(value).encode()
-
-
-def encode_json(msg):
-    to_load = msg.value.decode("utf-8")
-    return json.loads(to_load)
+    return json.dumps(value).encode("utf-8")
 
 
 def check_spidey(finalists: List) -> bool:
     return my_name == finalists[0]
 
 
-def check_spidey(finalists: List) -> bool:
-    return my_name == finalists[0]async def send_one(topic: str, msg: List):
+async def send_one(topic: str, msg: List):
+    """ Corrected send_one function """
     try:
         producer = AIOKafkaProducer(
-            bootstrap_servers=kafka_bootstrap_servers
+            bootstrap_servers=kafka_bootstrap_servers,
+            value_serializer=kafka_serializer,  # Corrected serialization
         )
         await producer.start()
 
         try:
-            await producer.send_and_wait(topic, kafka_serializer(msg))
+            await producer.send_and_wait(topic, msg)
         finally:
             await producer.stop()
 
     except Exception as err:
-        print(f"Some Kafka error: {err}")
+        print(f"Kafka Error: {err}")
 
 
 async def spiderweb_turn(msg):
-    finalists = encode_json(msg)
+    finalists = msg.value
     is_my_turn = check_spidey(finalists)
 
     if is_my_turn:
@@ -86,13 +85,14 @@ async def consume():
         spiderweb_topic,
         loop=loop,
         bootstrap_servers=kafka_bootstrap_servers,
+        value_deserializer=lambda x: json.loads(x.decode("utf-8")) if x else None,  # Corrected deserialization
     )
 
     try:
         await consumer.start()
 
     except Exception as e:
-        print(e)
+        print(f"Kafka Consumer Error: {e}")
         return
 
     try:
@@ -117,3 +117,31 @@ async def start_game():
     await send_one(topic=spiderweb_topic, msg=spidey_order)
 
     return {"order": spidey_order}
+
+
+@app.get("/messages")
+async def get_kafka_messages(limit: int = 10):
+    consumer = AIOKafkaConsumer(
+        spiderweb_topic,
+        bootstrap_servers=kafka_bootstrap_servers,
+        value_deserializer=lambda x: json.loads(x.decode("utf-8")) if x else None,
+        auto_offset_reset="latest",
+        enable_auto_commit=True,
+    )
+
+    await consumer.start()
+
+    messages = []
+
+    try:
+        await consumer.seek_to_end()
+        async for msg in consumer:
+            messages.append(msg.value)
+            if len(messages) >= limit:
+                break
+    except Exception as e:
+        print(f"Error consuming messages: {e}")
+    finally:
+        await consumer.stop()
+
+    return {"messages": messages}
