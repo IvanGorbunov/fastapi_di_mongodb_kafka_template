@@ -1,6 +1,12 @@
 # FastAPI DI + MongoDB + Kafka template
 
 
+## Installation:
+
+```bash
+docker compose -f ./docker-compose.yml up --detach --build
+```
+
 ## Endpoints:
 
 - Kafka: http://127.0.0.1:18080/

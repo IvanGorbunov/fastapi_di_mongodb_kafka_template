@@ -12,7 +12,9 @@ dependencies = [
     "uvicorn (>=0.34.0,<0.35.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "python-dotenv (>=1.0.1,<2.0.0)",
-    "aiokafka (>=0.12.0,<0.13.0)"
+    "aiokafka (>=0.12.0,<0.13.0)",
+    "gunicorn (>=23.0.0,<24.0.0)",
+    "dependency-injector[yaml] (>=4.45.0,<5.0.0)"
 ]
 
 

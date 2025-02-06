@@ -38,3 +38,12 @@ class KafkaService:
                 await callback(msg.value)
         finally:
             await consumer.stop()
+
+    async def get_messages(self):
+
+        await self._consumer.connect()
+
+        self.app_logger.logger.debug("Загружаем данные из Кафки...")
+
+        async for message in self._consumer.get_messages():
+            yield message
